@@ -27,7 +27,7 @@ namespace AutomataPDL
             Automaton<BDD> solution, Automaton<BDD> attempt, HashSet<char> alpahbet,
             CharSetSolver solver, long timeout, int maxGrade)
         {            
-            return GetGrade(solution, attempt, alpahbet, solver, timeout, maxGrade, FeedbackLevel.Minimal, true, true, true);
+            return GetGrade(solution, attempt, alpahbet, solver, timeout, maxGrade, FeedbackLevel.Minimal, true, true, true, false);
         }
 
         /// <summary>
@@ -45,7 +45,7 @@ namespace AutomataPDL
             Automaton<BDD> solution, Automaton<BDD> attempt, HashSet<char> alpahbet,
             CharSetSolver solver, long timeout, int maxGrade, FeedbackLevel level)
         {
-            return GetGrade(solution, attempt, alpahbet, solver, timeout, maxGrade, level, true, true, true);
+            return GetGrade(solution, attempt, alpahbet, solver, timeout, maxGrade, level, true, true, true, false); ;
         }
 
         /// <summary>
@@ -57,15 +57,17 @@ namespace AutomataPDL
         /// <param name="solver">SMT solver for char set</param>
         /// <param name="timeout">timeout for the PDL enumeration (suggested > 1000)</param>
         /// <param name="maxGrade">Max grade for the homework</param>        
-        /// <param name="enableDFAED">true to enable DFA edit distance</param>
+        /// <param name="enableDFAED">true to enable DFA edit distance</param> *Edit Distance: Quantifying how dissimilar two things are (Wikipedia)
         /// <param name="enablePDLED">true to enable PDL edit distance</param>
         /// <param name="enableDensity">true to enable density distance</param>
+        /// <param name="isMinimiseProblem">true if need to grade a minimisation problem</param>
         /// <returns>Grade for dfa2</returns>
         public static Pair<int, IEnumerable<DFAFeedback>> GetGrade(
             Automaton<BDD> dfaGoal, Automaton<BDD> dfaAttempt, HashSet<char> al,
             CharSetSolver solver, long timeout,
             int maxGrade, FeedbackLevel level,
-            bool enableDFAED, bool enablePDLED, bool enableDensity)
+            bool enableDFAED, bool enablePDLED, bool enableDensity,
+            bool isMinimiseProblem)
         {
             PDLEnumerator pdlEnumerator = new PDLEnumerator();
 
@@ -74,9 +76,15 @@ namespace AutomataPDL
             DFAFeedback defaultFeedback = new StringFeedback(level, StringFeedbackType.Wrong, al, solver);
 
             #region Accessory and initial vars
+            // By default student's attempt is not minimised 
+            var dfaAttemptMin = dfaAttempt;
+            if (!isMinimiseProblem)
+            {   // if this is not grading for a minimisation problem, minimise it
+                dfaAttemptMin = dfaAttemptMin.Determinize(solver).Minimize(solver);
+            }
             //Compute minimized version of DFAs
             var dfaGoalMin = dfaGoal.Determinize(solver).Minimize(solver);
-            var dfaAttemptMin = dfaAttempt.Determinize(solver).Minimize(solver);
+            
 
             //Initialize distances at high values in case they are not used
             // they only produce positive grade if between 0 and 1
@@ -92,12 +100,23 @@ namespace AutomataPDL
                         ((double)dfaGoalMin.StateCount));
             #endregion
 
-            #region check whether the attempt is equivalent to the solution
-            if (dfaGoal.IsEquivalentWith(dfaAttempt, solver))
+            #region check whether the attempt is equivalent to the solution as well as if the number of states is the same.
+            // Other than minimisation problems, every dfa attempt will be minimised.
+            // Therefore, correct dfa attempts will always have the same number of states as the minimised dfa goal
+            // i.e. Assuming the Atuomaton Library minimsation algorithm works properly, 
+            // there will never be an instance where the dfa attempt is equivalent to the dfa goal but with a differing number of states. (except when grading minimisation problems)
+            if (dfaGoalMin.IsEquivalentWith(dfaAttemptMin, solver) && dfaGoalMin.StateCount == dfaAttemptMin.StateCount)
             {
                 Console.WriteLine("Correct");
                 feedList.Add(new StringFeedback(level, StringFeedbackType.Correct, al, solver));
                 return new Pair<int, IEnumerable<DFAFeedback>>(maxGrade, feedList);
+            } 
+            // if this is a minimisation problem and the user attempt is accepts the same language but has not been minimised give meaninful feedback 
+            else if (isMinimiseProblem && dfaGoalMin.IsEquivalentWith(dfaAttemptMin, solver) && !(dfaGoalMin.StateCount == dfaAttemptMin.StateCount))
+            {
+                Console.WriteLine("Not Minimised");
+                feedList.Add(new StringFeedback(level, StringFeedbackType.Minimisation, al, solver));
+                return new Pair<int, IEnumerable<DFAFeedback>>((int)Math.Round((double)maxGrade / 4), feedList);
             }
             #endregion
 

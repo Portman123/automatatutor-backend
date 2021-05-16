@@ -91,7 +91,8 @@ namespace AutomataPDL
         }
 
         public static Pair<HashSet<char>, Automaton<BDD>> parseNFAFromXML(XElement Automaton1, CharSetSolver solver)
-        {
+        {   /* Converts nfa from xml to format grading engine understands
+             */
             HashSet<char> al = new HashSet<char>();
 
             var moves = new List<Move<BDD>>();

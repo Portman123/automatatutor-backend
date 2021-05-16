@@ -90,7 +90,7 @@ namespace TestPDL
             moves.Add(new Move<BDD>(5, 5, b));
 
             var dfa2 = Automaton<BDD>.Create(0, new int[] { 5 }, moves);
-            var feedbackGrade = DFAGrading.GetGrade(dfa1, dfa2, al, solver, timeout, 10, FeedbackLevel.Solution, true, false, false);
+            var feedbackGrade = DFAGrading.GetGrade(dfa1, dfa2, al, solver, timeout, 10, FeedbackLevel.Solution, true, false, false, false);
             var feedString = "<ul>";
             foreach (var feed in feedbackGrade.Second)
                 feedString += string.Format("<li>{0}</li>", feed);
@@ -147,7 +147,7 @@ namespace TestPDL
                 throw new PDLException("The regular expression should only accept strings over (a|b)*.");
 
 
-            var feedbackGrade = DFAGrading.GetGrade(aut1, aut2, al, solver, 2000, 10, FeedbackLevel.Solution, false, true, true);
+            var feedbackGrade = DFAGrading.GetGrade(aut1, aut2, al, solver, 2000, 10, FeedbackLevel.Solution, false, true, true, false);
 
             var feedString = "<ul>";
             foreach (var feed in feedbackGrade.Second)
@@ -196,7 +196,7 @@ namespace TestPDL
             //var v2 = DFAEditDistance.GetDFAOptimalEdit(dfa1, dfa2, al, solver, 4, new StringBuilder());
             //Console.WriteLine("density ratio: {0}; pdl edit distance: {1}; dfa edit distance: {2}", v0, v1, v2);
 
-            var gr = DFAGrading.GetGrade(dfaCorr, dfa2, al, solver, 2000,10,FeedbackLevel.Hint,true,true,true);
+            var gr = DFAGrading.GetGrade(dfaCorr, dfa2, al, solver, 2000,10,FeedbackLevel.Hint,true,true,true, false);
             Console.WriteLine(gr.First);
             foreach (var f in gr.Second)
                 Console.WriteLine(f.ToString());
@@ -235,7 +235,7 @@ namespace TestPDL
 
 
 
-            var feedbackGrade = DFAGrading.GetGrade(dfaCorrectPair.Second, dfaAttemptPair.Second, dfaCorrectPair.First, solver, 2000, 10, level, dfaedit, moseledit, density);
+            var feedbackGrade = DFAGrading.GetGrade(dfaCorrectPair.Second, dfaAttemptPair.Second, dfaCorrectPair.First, solver, 2000, 10, level, dfaedit, moseledit, density, false);
 
             var feedString = "<ul>";
             foreach (var feed in feedbackGrade.Second)
@@ -290,7 +290,7 @@ namespace TestPDL
             //var v2 = DFAEditDistance.GetDFAOptimalEdit(dfa1, dfa2, al, solver, 4, new StringBuilder());
             //Console.WriteLine("density ratio: {0}; pdl edit distance: {1}; dfa edit distance: {2}", v0, v1, v2);
 
-            var gr = DFAGrading.GetGrade(dfaCorr, dfa2, al, solver, 2000, 10, FeedbackLevel.Hint, true, true, true);
+            var gr = DFAGrading.GetGrade(dfaCorr, dfa2, al, solver, 2000, 10, FeedbackLevel.Hint, true, true, true, false);
             Console.WriteLine(gr.First);
             foreach (var f in gr.Second)
                 Console.WriteLine(f.ToString());
@@ -345,12 +345,12 @@ namespace TestPDL
             movesAttempt.Add(new Move<BDD>(5, 1, a));
             var dfaAttempt = Automaton<BDD>.Create(0, new int[] { 2 }, movesAttempt);
 
-            var gr = DFAGrading.GetGrade(dfaSolution, dfaAttempt, al, solver, 1500, 10, FeedbackLevel.Hint, true, true, true);
+            var gr = DFAGrading.GetGrade(dfaSolution, dfaAttempt, al, solver, 1500, 10, FeedbackLevel.Hint, true, true, true, false);
             Console.WriteLine(gr.First);
             foreach (var f in gr.Second)
                 Console.WriteLine(f.ToString());
 
-            gr = DFAGrading.GetGrade(dfaAttempt, dfaSolution, al, solver, 1500, 10, FeedbackLevel.Hint, true, true, true);
+            gr = DFAGrading.GetGrade(dfaAttempt, dfaSolution, al, solver, 1500, 10, FeedbackLevel.Hint, true, true, true, false);
             Console.WriteLine(gr.First);
             foreach (var f in gr.Second)
                 Console.WriteLine(f.ToString());

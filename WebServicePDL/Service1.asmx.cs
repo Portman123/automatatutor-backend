@@ -59,7 +59,7 @@ namespace WebServicePDL
             var maxG = int.Parse(maxGrade.Value);
 
             //Compute feedback
-            var feedbackGrade = DFAGrading.GetGrade(dfaCorrectPair.Second, dfaAttemptPair.Second, dfaCorrectPair.First, solver, 1500, maxG, level, dfaedit, density, moseledit);
+            var feedbackGrade = DFAGrading.GetGrade(dfaCorrectPair.Second, dfaAttemptPair.Second, dfaCorrectPair.First, solver, 1500, maxG, level, dfaedit, density, moseledit, false); //***
 
             //Pretty print feedback
             var feedString = "<ul>";
@@ -192,11 +192,151 @@ namespace WebServicePDL
             return outXML;
         }
 
-        //---------------------------
-        // Pumping lemma methods
-        //---------------------------
+        [WebMethod]
+        public XElement ComputeFeedbackDfaMinimisation(XElement dfaCorrectDesc, XElement dfaAttemptDesc, XElement maxGrade)
+        {
+            // Turns xml into string 
+            #region Check if item is in cache
+            StringBuilder key = new StringBuilder();
+            key.Append("feedNFADFA");
+            key.Append(dfaCorrectDesc.ToString());
+            key.Append(dfaAttemptDesc.ToString());
+            string keystr = key.ToString();
+
+            // Checks it is cached
+            //var cachedValue = HttpContext.Current.Cache.Get(key.ToString());
+            //if (cachedValue != null)
+            //{
+            //    HttpContext.Current.Cache.Remove(keystr);
+            //    HttpContext.Current.Cache.Add(keystr, cachedValue, null, System.Web.Caching.Cache.NoAbsoluteExpiration, TimeSpan.FromDays(30), System.Web.Caching.CacheItemPriority.Normal, null);
+            //    return (XElement)cachedValue;
+            //}
+            #endregion
+
+            // Specialised boolen algebra solver for BDDs
+            CharSetSolver solver = new CharSetSolver(BitWidth.BV64);
+
+            // Read input 
+            // Extract question from xml format
+            // Calls a method from DFAUtilities 
+            // Takes: 
+                // - XML description of Automata 
+                // - Boolean algebra solver (CharSetSolver in our case)
+            // Returns pair:
+                // - 1. HashSet<char> al (I think is the set containing the alphabet of the automata)
+                // - 2. Automata<BDD> (microsofts implementation of an Automata class. Binary Decision Diagram (BDD) is a computationaly convenient form for this to take)
+            // ***return new Pair<HashSet<char>, Automaton<BDD>>(al, Automaton<BDD>.Create(start, finalStates, moves));***
+            var dfaCorrectPair = DFAUtilities.parseDFAFromXML(dfaCorrectDesc, solver);
+
+            // SIDENOTE
+            // ***Automaton<BDD>.Create(start, finalStates, moves)*** what does this do?
+            /* Creates a new Automaton object from microsofts library by calling Create method which takes start and final states aswell as moves...
+             *      ... (Moves is an object which currently I assume contains states with their transitions)... 
+             *      (note this version of automata tutor actually uses an ANCIENT version of the microsoft api)
+             * This method tests properties 
+             * The one of interest (since it's currently causing errors) is "isDeterministic"
+             * For every move it runs this code: 
+             *      isDeterministic = (isDeterministic && delta[move.SourceState].Count < 2);
+             *      //looks like checks if there is more than one of the same transition from a state
+             * Method then creates a new instance of Automaton<BDD> setting all the properties and returning it
+             * This returned Automaton<BDD> is now the object we subsequently refer to.
+             */
+
+            //dfaCorrectPair.Second.IsDeterministic = true;
+            // test comes back false suggesting non determinism is decided on decleration of new Automata<BDD>
+            dfaCorrectPair.Second.CheckDeterminism(solver);
+
+            // Calculate correct answer from question
+            var dfaCorrect = dfaCorrectPair.Second.RemoveEpsilons(solver.MkOr).Determinize(solver).Minimize(solver);
+
+            //(extract student's attempt from xml format)
+            var dfaAttemptPair = DFAUtilities.parseDFAFromXML(dfaAttemptDesc, solver);
+            dfaAttemptPair.Second.CheckDeterminism(solver);
+
+            var level = FeedbackLevel.Hint;
+
+            var maxG = int.Parse(maxGrade.Value);
+
+            //Compute feedback
+            var feedbackGrade = DFAGrading.GetGrade(dfaCorrect, dfaAttemptPair.Second, dfaCorrectPair.First, solver, 1500, maxG, level, false, false, false, true);
+
+            //Pretty print feedback
+            var feedString = "<ul>";
+            foreach (var feed in feedbackGrade.Second)
+                feedString += string.Format("<li>{0}</li>", feed);
+            feedString += "</ul>";
+
+            var output = string.Format("<div><grade>{0}</grade><feedString>{1}</feedString></div>", feedbackGrade.First, feedString);
+
+            XElement outXML = XElement.Parse(output);
+            //Add this element to chace and return it
+            //HttpContext.Current.Cache.Add(key.ToString(), outXML, null, System.Web.Caching.Cache.NoAbsoluteExpiration, TimeSpan.FromDays(30), System.Web.Caching.CacheItemPriority.Normal, null);
+
+            return outXML;
+        }
 
         [WebMethod]
+        public XElement ComputeFeedbackRegexpToDFA(XElement regexCorrectDesc, XElement dfaAttemptDesc, XElement alphabet, XElement maxGrade, XElement feedbackLevel, XElement enabledFeedbacks)
+        {
+            #region Check if item is in cache
+            StringBuilder key = new StringBuilder();
+            key.Append("feed");
+            key.Append(regexCorrectDesc.ToString());
+            key.Append(dfaAttemptDesc.ToString());
+            key.Append(feedbackLevel.ToString());
+            key.Append(enabledFeedbacks.ToString());
+            string keystr = key.ToString();
+
+            var cachedValue = HttpContext.Current.Cache.Get(key.ToString());
+            if (cachedValue != null)
+            {
+                HttpContext.Current.Cache.Remove(keystr);
+                HttpContext.Current.Cache.Add(keystr, cachedValue, null, System.Web.Caching.Cache.NoAbsoluteExpiration, TimeSpan.FromDays(30), System.Web.Caching.CacheItemPriority.Normal, null);
+                return (XElement)cachedValue;
+            }
+            #endregion
+
+            CharSetSolver solver = new CharSetSolver(BitWidth.BV64);
+
+            //Read input 
+            var dfaCorrectPair = DFAUtilities.parseRegexFromXML(regexCorrectDesc, alphabet, solver);
+            var dfaAttemptPair = DFAUtilities.parseDFAFromXML(dfaAttemptDesc, solver);
+
+            var level = (FeedbackLevel)Enum.Parse(typeof(FeedbackLevel), feedbackLevel.Value, true);
+            var enabList = (enabledFeedbacks.Value).Split(',').ToList<String>();
+            //bool dfaedit = enabList.Contains("dfaedit"), moseledit = enabList.Contains("moseledit"), density = enabList.Contains("density");
+            bool dfaedit = true, moseledit = true, density = true;
+
+            var maxG = int.Parse(maxGrade.Value);
+
+            //Compute feedback
+            var feedbackGrade = DFAGrading.GetGrade(dfaCorrectPair.Second, dfaAttemptPair.Second, dfaCorrectPair.First, solver, 1500, maxG, level, dfaedit, density, moseledit, false); //***
+
+            //Pretty print feedback
+            var feedString = "<ul>";
+            foreach (var feed in feedbackGrade.Second)
+            {
+                feedString += string.Format("<li>{0}</li>", feed);
+                break;
+            }
+            feedString += "</ul>";
+
+            //var output = string.Format("<result><grade>{0}</grade><feedString>{1}</feedString></result>", feedbackGrade.First, feedString);
+            var outXML = new XElement("result",
+                                    new XElement("grade", feedbackGrade.First),
+                                    new XElement("feedString", XElement.Parse(feedString)));
+            //XElement outXML = XElement.Parse(output);
+            //Add this element to chace and return it
+            HttpContext.Current.Cache.Add(key.ToString(), outXML, null, System.Web.Caching.Cache.NoAbsoluteExpiration, TimeSpan.FromDays(30), System.Web.Caching.CacheItemPriority.Normal, null);
+
+            return outXML;
+        }
+
+            //---------------------------
+            // Pumping lemma methods
+            //---------------------------
+
+            [WebMethod]
         public XElement ComputeFeedbackRegexp(XElement regexCorrectDesc, XElement regexAttemptDesc, XElement alphabet, XElement feedbackLevel, XElement enabledFeedbacks, XElement maxGrade)
         {
             CharSetSolver solver = new CharSetSolver(BitWidth.BV64);
@@ -212,7 +352,7 @@ namespace WebServicePDL
                 bool dfaedit = false, moseledit = false, density = true;
                 int maxG = int.Parse(maxGrade.Value);
 
-                var feedbackGrade = DFAGrading.GetGrade(dfaCorrectPair.Second, dfaAttemptPair.Second, dfaCorrectPair.First, solver, 1500, maxG, level, dfaedit, moseledit, density);
+                var feedbackGrade = DFAGrading.GetGrade(dfaCorrectPair.Second, dfaAttemptPair.Second, dfaCorrectPair.First, solver, 1500, maxG, level, dfaedit, moseledit, density, false); //***
 
                 var feedString = "<ul>";
                 foreach (var feed in feedbackGrade.Second)

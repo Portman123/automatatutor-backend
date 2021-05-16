@@ -136,7 +136,7 @@ namespace TestPDL
 
             var dfa_wrong = Automaton<BDD>.Create(0, new int[] { 4 }, moves);
 
-            var v1 = DFAGrading.GetGrade(dfa_correct, dfa_wrong, al, solver, timeout, 10, FeedbackLevel.Hint, true, true, true);
+            var v1 = DFAGrading.GetGrade(dfa_correct, dfa_wrong, al, solver, timeout, 10, FeedbackLevel.Hint, true, true, true, false);
 
             Console.WriteLine("Grade: {0}", v1.First);
             foreach (var feed in v1.Second)
@@ -169,7 +169,7 @@ namespace TestPDL
 
             var dfa1 = Automaton<BDD>.Create(0, new int[] { 0 }, moves1);
 
-            var v1 = DFAGrading.GetGrade(dfa_correct, dfa1, al, solver, timeout, 10, FeedbackLevel.Minimal, true, false, false);
+            var v1 = DFAGrading.GetGrade(dfa_correct, dfa1, al, solver, timeout, 10, FeedbackLevel.Minimal, true, false, false, false);
 
             Console.WriteLine("Grade: {0}", v1.First);
             foreach (var feed in v1.Second)
@@ -197,7 +197,7 @@ namespace TestPDL
                 throw new PDLException("The input is not a well formatted regular expression: " + e.Message);
             }
 
-            var v1 = DFAGrading.GetGrade(aut1, aut2, al, solver, timeout, 10, FeedbackLevel.Minimal, true, false, false);
+            var v1 = DFAGrading.GetGrade(aut1, aut2, al, solver, timeout, 10, FeedbackLevel.Minimal, true, false, false, false);
 
             Console.WriteLine("Grade: {0}", v1.First);
             foreach (var feed in v1.Second)
@@ -321,7 +321,7 @@ namespace TestPDL
             //var v1 = Grading.GetGrade(dfa_correct, dfa1, al, solver, timeout, 10);
             //var v2 = Grading.GetGrade(dfa_correct, dfa2, al, solver, timeout, 10);
             //var v3 = Grading.GetGrade(dfa_correct, dfa3, al, solver, timeout, 10);
-            var v4 = DFAGrading.GetGrade(dfa_correct, dfa4, al, solver, timeout, 10, FeedbackLevel.Minimal, true, false, false);
+            var v4 = DFAGrading.GetGrade(dfa_correct, dfa4, al, solver, timeout, 10, FeedbackLevel.Minimal, true, false, false, false);
             //var v5 = Grading.GetGrade(dfa_correct, dfa5, al, solver, timeout, 10);
 
 
