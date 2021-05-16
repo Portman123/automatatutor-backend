@@ -10,7 +10,10 @@ namespace AutomataPDL
     public enum StringFeedbackType
     {
         Correct,
-        Wrong
+        Wrong,
+        Minimisation
+        // Extra type of string feedback for minimisation problems
+        // Could be improved by properly integrating DFAFeedback class
     }
     public enum FeedbackLevel
     {
@@ -72,6 +75,8 @@ namespace AutomataPDL
             switch(sfType){
                 case StringFeedbackType.Correct: return "CORRECT!!";
                 case StringFeedbackType.Wrong: return "Try again";
+                // Basic implementation but could be improved (see line 10)
+                case StringFeedbackType.Minimisation: return "Your solution accepts the same language but is not minimised"; 
                 default: throw new PDLException(string.Format("Undefined type {0}",sfType));
             }
         }
